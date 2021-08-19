@@ -30,14 +30,14 @@ db_drop_and_create_all()
 '''
 @app.route('/drinks')
 def drinks():
-    # print(jwt)
     drinks1 = Drink.query.all()
     print(drinks1)
     for drink in drinks1:
        drinks =drink.short()
-    
-    
-    print(drinks)
+
+    if len(drinks1)==0:
+      abort(404)
+
     return jsonify({
         'success':True,
         "drinks": [drinks] 
@@ -56,13 +56,13 @@ def drinks():
 @requires_auth('get:drinks-detail')
 def drinks_detail(jwt):
     drinks1 = Drink.query.all()
-    # print(drinks1)
     drinks=[]
     for drink in drinks1:
        drink =drink.long()
        drinks.append(drink)
     
-    
+    if len(drinks1)==0:
+      abort(404)
     print(drinks)
     return jsonify({
         'success':True,
@@ -86,16 +86,17 @@ def post_drinks(jwt):
     body=request.get_json()
     new_title= body.get('title')
     new_recipe=body.get('recipe')
-    print(new_title)
-    print(json.dumps(new_recipe))
-    drink = Drink(title=new_title,recipe=json.dumps(new_recipe))
-    drink.insert()
     
-    return  jsonify({
-        'success':True,
-        "drinks": [drink.long()] 
-        }),200
-
+    try:
+        drink = Drink(title=new_title,recipe=json.dumps(new_recipe))
+        drink.insert()
+        
+        return  jsonify({
+            'success':True,
+            "drinks": [drink.long()] 
+            }),200
+    except:
+      abort(422)
 
 
 '''
@@ -118,15 +119,12 @@ def patch_drinks(jwt,id):
     body=request.get_json()
     drink.title= body.get('title')
     new_recipe=body.get('recipe')
-    # print(new_title)
-    # print(json.dumps(new_recipe))
     drink.recipe=json.dumps(new_recipe)
-    # drink = Drink(title=new_title,recipe=json.dumps(new_recipe))
     drink.update()
-    formatted_drink=format([drink.long()] )
+    formatted_drink=format(drink.long() )
     return  jsonify({
         'success':True,
-        "drinks": formatted_drink
+        "drinks": [formatted_drink]
         }),200
 
 
@@ -143,15 +141,18 @@ def patch_drinks(jwt,id):
 @app.route('/drinks/<int:id>',methods=['DELETE'])
 @requires_auth('delete:drinks')
 def delete_drinks(jwt,id):
-    drink = Drink.query.filter(Drink.id==id).one_or_none()
-    if drink is None:
-        abort(404)
+    try:
+        drink = Drink.query.filter(Drink.id==id).one_or_none()
+        if drink is None:
+            abort(404)
 
-    drink.delete()
-    return jsonify({
-        "success": True,
-         "delete": id
-        }),200
+        drink.delete()
+        return jsonify({
+            "success": True,
+            "delete": id
+            }),200
+    except:
+        abort(400)
 
 
 # Error Handling
@@ -201,3 +202,12 @@ def handle_auth_error(ex):
     response = jsonify(ex.error)
     response.status_code = ex.status_code
     return response
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({
+      'success': False,
+      'error':400,
+      'message': 'Bad request'
+    }),400
