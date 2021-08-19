@@ -31,7 +31,6 @@ db_drop_and_create_all()
 @app.route('/drinks')
 def drinks():
     drinks1 = Drink.query.all()
-    print(drinks1)
     for drink in drinks1:
        drinks =drink.short()
 
@@ -63,7 +62,6 @@ def drinks_detail(jwt):
     
     if len(drinks1)==0:
       abort(404)
-    print(drinks)
     return jsonify({
         'success':True,
         "drinks": drinks 
